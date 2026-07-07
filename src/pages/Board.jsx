@@ -81,6 +81,41 @@ export default function Board() {
     if (n.z !== maxZ) notes.update(n.id, { z: maxZ + 1 })
   }
 
+  // Lim inn bilde fra utklippstavlen -> ny lapp (nar du ikke skriver i en lapp).
+  const pasteRef = useRef(null)
+  pasteRef.current = async (file) => {
+    try {
+      const url = await uploadImage(file, user?.id)
+      const k = notes.rows.length % 8
+      await notes.insert({
+        content: '',
+        color: 'yellow',
+        tags: [],
+        x: 32 + k * 28,
+        y: 32 + k * 28,
+        z: maxZ + 1,
+        image_url: url,
+      })
+    } catch (err) {
+      alert('Kunne ikke lime inn bilde: ' + err.message)
+    }
+  }
+  useEffect(() => {
+    const onPaste = (e) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      const item = [...items].find((i) => i.type.startsWith('image/'))
+      if (!item) return
+      const ae = document.activeElement
+      if (ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT')) return
+      e.preventDefault()
+      const file = item.getAsFile()
+      if (file) pasteRef.current(file)
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [])
+
   const toggle = (setState, value) =>
     setState((prev) => {
       const next = new Set(prev)
@@ -93,7 +128,7 @@ export default function Board() {
       <div className="px-4 pt-6 md:px-8">
         <PageHeader
           title="Tavle"
-          description="Fri notatflate. Dra lappene rundt, endre størrelse, gi farge, etiketter og bilder."
+          description="Fri notatflate. Dra lappene rundt, endre størrelse, gi farge og etiketter. Lim inn bilder med Ctrl+V."
           action={
             <Button onClick={addNote}>
               <PlusIcon className="h-4 w-4" /> Ny lapp
@@ -277,9 +312,7 @@ function NoteCard({ note, userId, onChange, onDelete, onFront }) {
   const removeTag = (t) =>
     onChange(note.id, { tags: (note.tags ?? []).filter((x) => x !== t) })
 
-  const onFile = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const doUpload = async (file) => {
     setUploading(true)
     try {
       const url = await uploadImage(file, userId)
@@ -288,8 +321,21 @@ function NoteCard({ note, userId, onChange, onDelete, onFront }) {
       alert('Kunne ikke laste opp bilde: ' + err.message)
     } finally {
       setUploading(false)
-      e.target.value = ''
     }
+  }
+  const onFile = (e) => {
+    const file = e.target.files?.[0]
+    if (file) doUpload(file)
+    e.target.value = ''
+  }
+  const onPasteImage = (e) => {
+    const item = [...(e.clipboardData?.items || [])].find((i) =>
+      i.type.startsWith('image/'),
+    )
+    if (!item) return
+    e.preventDefault()
+    const file = item.getAsFile()
+    if (file) doUpload(file)
   }
 
   return (
@@ -361,6 +407,7 @@ function NoteCard({ note, userId, onChange, onDelete, onFront }) {
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onBlur={saveContent}
+          onPaste={onPasteImage}
           placeholder="Skriv ..."
           className="min-h-0 flex-1 resize-none bg-transparent text-sm placeholder-slate-500 focus:outline-none"
         />
