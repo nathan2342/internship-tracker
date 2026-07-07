@@ -136,6 +136,13 @@ export const ListTodoIcon = (p) => (
   </Svg>
 )
 
+export const KeyIcon = (p) => (
+  <Svg {...p}>
+    <circle cx="8" cy="15" r="4" />
+    <path d="m10.85 12.15 8.15-8.15 2 2m-4 0 2 2" />
+  </Svg>
+)
+
 export const GearIcon = (p) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="3" />

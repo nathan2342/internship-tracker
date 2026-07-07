@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
-import { Button } from './ui'
+import { Button, Modal, Field, Input } from './ui'
 import InternshipMenu from './InternshipMenu'
 import {
   HomeIcon,
@@ -14,7 +16,91 @@ import {
   SunIcon,
   MoonIcon,
   LogoutIcon,
+  KeyIcon,
 } from './icons'
+
+function PasswordButton({ compact = false }) {
+  const [open, setOpen] = useState(false)
+  const [pw, setPw] = useState('')
+  const [status, setStatus] = useState('idle') // idle | busy | ok | error
+  const [message, setMessage] = useState('')
+
+  const save = async (e) => {
+    e.preventDefault()
+    setStatus('busy')
+    setMessage('')
+    const { error } = await supabase.auth.updateUser({ password: pw })
+    if (error) {
+      setStatus('error')
+      setMessage(error.message)
+    } else {
+      setStatus('ok')
+      setMessage('Passord lagret. Du kan nå logge inn med det overalt.')
+      setPw('')
+    }
+  }
+
+  return (
+    <>
+      {compact ? (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setOpen(true)}
+          aria-label="Sett passord"
+        >
+          <KeyIcon className="h-5 w-5" />
+        </Button>
+      ) : (
+        <button
+          onClick={() => setOpen(true)}
+          className="mb-2 flex w-full items-center gap-2 rounded-lg px-1 text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+        >
+          <KeyIcon className="h-4 w-4" /> Sett / endre passord
+        </button>
+      )}
+      <Modal open={open} onClose={() => setOpen(false)} title="Sett passord">
+        <form onSubmit={save} className="space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Sett et passord på kontoen din, så kan du logge inn med e-post og
+            passord på alle enheter (også i den installerte appen).
+          </p>
+          <Field label="Nytt passord">
+            <Input
+              type="password"
+              required
+              minLength={6}
+              autoComplete="new-password"
+              placeholder="Minst 6 tegn"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+            />
+          </Field>
+          {status === 'error' && (
+            <p className="text-sm text-red-600 dark:text-red-400">{message}</p>
+          )}
+          {status === 'ok' && (
+            <p className="text-sm text-green-600 dark:text-green-400">
+              {message}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setOpen(false)}
+            >
+              Lukk
+            </Button>
+            <Button type="submit" disabled={status === 'busy'}>
+              {status === 'busy' ? 'Lagrer ...' : 'Lagre passord'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
+  )
+}
 
 const NAV = [
   { to: '/', label: 'Dashboard', short: 'Hjem', icon: HomeIcon, end: true },
@@ -81,6 +167,7 @@ export default function Layout({ children }) {
             </p>
             <ThemeToggle />
           </div>
+          <PasswordButton />
           <Button variant="secondary" className="w-full" onClick={signOut}>
             <LogoutIcon className="h-4 w-4" /> Logg ut
           </Button>
@@ -91,6 +178,7 @@ export default function Layout({ children }) {
       <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/90 px-3 py-2 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/90">
         <InternshipMenu compact />
         <div className="flex items-center gap-1">
+          <PasswordButton compact />
           <ThemeToggle />
           <Button
             variant="ghost"
