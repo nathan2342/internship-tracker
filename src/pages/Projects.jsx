@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCollection } from '../hooks/useCollection'
 import {
   Button,
@@ -55,8 +55,31 @@ export default function Projects() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(empty)
   const [saving, setSaving] = useState(false)
-  const [statusFilter, setStatusFilter] = useState('Alle')
+  const [statusFilter, setStatusFilter] = useState(() => {
+    try {
+      return new Set(
+        JSON.parse(localStorage.getItem('projectStatusFilter') || '[]'),
+      )
+    } catch {
+      return new Set()
+    }
+  })
   const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    localStorage.setItem(
+      'projectStatusFilter',
+      JSON.stringify([...statusFilter]),
+    )
+  }, [statusFilter])
+
+  const toggleStatus = (s) =>
+    setStatusFilter((prev) => {
+      const n = new Set(prev)
+      n.has(s) ? n.delete(s) : n.add(s)
+      return n
+    })
+  const clearStatus = () => setStatusFilter(new Set())
 
   const todosByProject = useMemo(() => {
     const m = {}
@@ -130,7 +153,7 @@ export default function Projects() {
 
   const q = search.trim().toLowerCase()
   const visible = rows.filter((r) => {
-    const okStatus = statusFilter === 'Alle' || r.status === statusFilter
+    const okStatus = statusFilter.size === 0 || statusFilter.has(r.status)
     const okSearch =
       !q ||
       r.title?.toLowerCase().includes(q) ||
@@ -151,12 +174,22 @@ export default function Projects() {
       />
 
       <div className="mb-3 flex flex-wrap gap-2">
-        {['Alle', ...STATUSES].map((s) => (
+        <button
+          onClick={clearStatus}
+          className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+            statusFilter.size === 0
+              ? 'bg-indigo-600 text-white'
+              : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+          }`}
+        >
+          Alle
+        </button>
+        {STATUSES.map((s) => (
           <button
             key={s}
-            onClick={() => setStatusFilter(s)}
+            onClick={() => toggleStatus(s)}
             className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-              statusFilter === s
+              statusFilter.has(s)
                 ? 'bg-indigo-600 text-white'
                 : 'bg-slate-200 text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
             }`}
