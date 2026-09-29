@@ -6,15 +6,16 @@ Appen kan installeres på mobil og PC, og all data synkroniseres mellom enheter.
 
 **Live:** https://internship-tracker-lilac-psi.vercel.app
 
-<!--
-Skjermbilder: legg bildene i en mappe "docs/" og fjern kommentaren rundt blokken under.
-
 ## Skjermbilder
 
-| Dashboard | Prosjekter | Tavle |
-|---|---|---|
-| ![Dashboard](docs/dashboard.png) | ![Prosjekter](docs/prosjekter.png) | ![Tavle](docs/tavle.png) |
--->
+### Dashboard
+![Dashboard](docs/dashboard.png)
+
+### Prosjekter med gjøremål
+![Prosjekter](docs/prosjekter.png)
+
+### Tavle
+![Tavle](docs/tavle.png)
 
 ## Funksjonalitet
 
