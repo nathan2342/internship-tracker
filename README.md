@@ -1,112 +1,92 @@
-# Internship Tracker (PWA)
+# Internship Tracker
 
-En Progressive Web App for å holde oversikt over internshipet ditt. Fungerer på
-mobil og PC, kan installeres på hjemskjerm, og synkroniserer data mellom enheter
-via Supabase.
+En Progressive Web App for å dokumentere og strukturere et internship: ukesoppsummeringer, prosjekter, gjøremål, læringsnotater, daglig logg og en visuell idétavle.
 
-**Teknologi:** React + Vite · Tailwind CSS · Supabase (database + auth) ·
-vite-plugin-pwa · klar for Vercel.
+Appen kan installeres på mobil og PC, og all data synkroniseres mellom enheter.
 
-**Seksjoner:** Dashboard · Ukesoppsummeringer · Ting jeg har lært · Daglig logg ·
-Fremtidige prosjekter · Plan fremover. Lys/mørk modus inkludert.
+**Live:** https://internship-tracker-lilac-psi.vercel.app
 
----
+<!--
+Skjermbilder: legg bildene i en mappe "docs/" og fjern kommentaren rundt blokken under.
 
-## 1. Forutsetninger
+## Skjermbilder
 
-- Node.js 18 eller nyere
-- En Supabase-konto (gratis): https://supabase.com
+| Dashboard | Prosjekter | Tavle |
+|---|---|---|
+| ![Dashboard](docs/dashboard.png) | ![Prosjekter](docs/prosjekter.png) | ![Tavle](docs/tavle.png) |
+-->
 
-## 2. Sett opp Supabase
+## Funksjonalitet
 
-1. Gå til https://supabase.com og lag et nytt prosjekt. Velg et passord for
-   databasen og en region nær deg.
-2. Vent til prosjektet er ferdig opprettet (ca. 1–2 min).
-3. **Lag tabellene:** Åpne **SQL Editor** → **New query**, lim inn hele
-   innholdet fra [`supabase/schema.sql`](supabase/schema.sql) og trykk **Run**.
-   Dette oppretter alle tabeller og slår på Row Level Security slik at hver
-   bruker kun ser sin egen data.
-   - **Oppgradering (v2):** Har du allerede kjørt `schema.sql` fra før, kjør i
-     tillegg [`supabase/migration_v2.sql`](supabase/migration_v2.sql). Den legger
-     til flere internships, utvidede prosjekter (status/omfang/skills) og
-     arbeidsoppføringer per uke. Trygg å kjøre flere ganger.
-4. **Slå på e-post-innlogging:** Gå til **Authentication → Sign In / Providers**
-   og bekreft at **Email** er aktivert (det er det som standard). Appen bruker
-   passordløs innlogging (magic link), så ingen ekstra oppsett trengs.
-5. **Sett tillatte URL-er:** Gå til **Authentication → URL Configuration**.
-   - Sett **Site URL** til `http://localhost:5173` mens du utvikler.
-   - Legg til både `http://localhost:5173` og (senere) Vercel-URL-en din under
-     **Redirect URLs**.
+**Flere internships.** Data er knyttet til det enkelte internshipet, så flere perioder kan holdes adskilt. Bytt mellom dem fra menyen.
 
-## 3. Hent API-nøklene dine
+**Uker.** Oversikt over uker der hver uke kan ha høydepunkter, utfordringer og konkrete arbeidsoppføringer koblet til et prosjekt.
 
-Gå til **Project Settings → API** og kopier:
+**Prosjekter.** Fra idé til ferdig, med status (Idé / Ikke begynt / Pågår / Ferdig), omfang, beskrivelse og ferdighets-tagger. Filtrering på flere statuser samtidig, og fritekstsøk på tittel og ferdigheter.
 
-- **Project URL** (ser ut som `https://xxxx.supabase.co`)
-- **anon / public** nøkkelen
+**Gjøremål.** Hierarkiske oppgaver med undergjøremål, inline-redigering og dra-og-slipp for både sortering og å gjøre en oppgave om til en deloppgave. Egen fane som samler alle gjøremål på tvers av prosjekter.
 
-Lag deretter en `.env`-fil i prosjektmappen (kopier fra `.env.example`):
+**Tavle.** Fri notatflate med flyttbare og skalerbare lapper. Farger, etiketter, filtrering og bilder, både via opplasting og innliming fra utklippstavlen.
 
-```env
-VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=din-anon-public-key
+**Læringsnotater og daglig logg.** Korte notater med kategori og dato, og en løpende dagbok.
+
+**Lys og mørk modus**, responsivt design fra mobil til stor skjerm.
+
+## Teknisk
+
+| Område | Valg |
+|---|---|
+| Frontend | React, Vite, React Router |
+| Styling | Tailwind CSS |
+| Backend | Supabase (PostgreSQL, Auth, Storage) |
+| PWA | vite-plugin-pwa (service worker + manifest) |
+| Hosting | Vercel, med automatisk utrulling fra GitHub |
+
+### Datamodell og sikkerhet
+
+Databasen består av tabeller for internships, uker, arbeidsoppføringer, prosjekter, gjøremål, notater, læringspunkter og daglig logg.
+
+Tilgangskontroll håndheves i databasen med **Row Level Security**, ikke bare i klienten. Hver tabell har egne policyer for `select`, `insert`, `update` og `delete` som sikrer at en bruker kun kan lese og endre sine egne rader:
+
+```sql
+create policy "projects_select" on public.projects
+  for select using (auth.uid() = user_id);
 ```
 
-> `.env` er allerede i `.gitignore` og blir aldri sjekket inn. anon-nøkkelen er
-> ment å brukes i nettleseren – sikkerheten ligger i Row Level Security.
+Bilder lagres i Supabase Storage, der opplasting er begrenset til brukerens egen mappe.
 
-## 4. Kjør appen lokalt
+Skjemaet er utviklet inkrementelt gjennom nummererte migrasjoner i [`supabase/`](supabase/), fra det opprinnelige oppsettet til støtte for flere internships, prosjekt-gjøremål, undergjøremål, sortering og notattavle.
+
+### Autentisering
+
+Innlogging med e-post og passord via Supabase Auth. Løsningen ble bevisst endret fra innloggingslenke på e-post til passord, fordi lenker alltid åpnes i nettleseren og dermed ikke logger brukeren inn i den installerte app-versjonen.
+
+## Kjøre lokalt
+
+Krever Node.js 18 eller nyere.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Åpne http://localhost:5173. Skriv inn e-posten din, trykk «Send
-innloggingslenke», og åpne lenken du får på e-post **på samme enhet**. Du er nå
-logget inn, og samme bruker ser samme data på alle enheter.
+Opprett en `.env`-fil basert på [`.env.example`](.env.example):
 
-## 5. Installer som app (PWA)
-
-- **Mobil (Chrome/Safari):** Åpne siden → del-/menyknapp → «Legg til på
-  Hjem-skjerm».
-- **PC (Chrome/Edge):** Installer-ikonet i adresselinjen.
-
-PWA-en fungerer best på en bygget versjon. Test gjerne med:
-
-```bash
-npm run build
-npm run preview
+```env
+VITE_SUPABASE_URL=https://ditt-prosjekt.supabase.co
+VITE_SUPABASE_ANON_KEY=din-publishable-key
 ```
 
-## 6. Deploy til Vercel
-
-1. Push prosjektet til et Git-repo (GitHub/GitLab/Bitbucket).
-2. Gå til https://vercel.com → **Add New… → Project** → importer repoet.
-3. Vercel oppdager Vite automatisk:
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
-4. Under **Environment Variables**, legg til de samme to nøklene:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-5. Trykk **Deploy**.
-6. Etter deploy: kopier Vercel-URL-en og legg den til i Supabase under
-   **Authentication → URL Configuration** (både som Site URL og Redirect URL),
-   slik at innloggingslenkene peker til riktig sted i produksjon.
-
-`vercel.json` sørger allerede for at klient-routing (SPA) fungerer.
-
----
+Kjør deretter SQL-filene i [`supabase/`](supabase/) i rekkefølge i Supabase SQL Editor for å sette opp tabeller og sikkerhetspolicyer.
 
 ## Prosjektstruktur
 
 ```
 src/
-  components/   Layout, Login, ikoner, gjenbrukbare UI-komponenter
-  context/      Auth- og tema-context (lys/mørk)
-  hooks/        useCollection – generisk CRUD mot Supabase
-  lib/          supabase-klient + dato-hjelpere
-  pages/        Dashboard, Uker, Lært, Logg, Prosjekter, Plan
-supabase/
-  schema.sql    Tabeller + Row Level Security
+  components/   Layout, innlogging, gjøremålstre, delte UI-komponenter
+  context/      Auth, valgt internship, lys/mørk tema
+  hooks/        useCollection, generisk CRUD mot Supabase
+  lib/          Supabase-klient, dato- og sorteringshjelpere
+  pages/        Dashboard, Uker, Prosjekter, Gjøremål, Tavle, Lært, Logg
+supabase/       Databaseskjema og migrasjoner
 ```
